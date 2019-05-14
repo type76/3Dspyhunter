@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta charset="utf-8" />
+  <meta name=viewport content='width=500'>
+  <title>happy joy</title>
+  <style type="text/css">
+  body {
+    background: #333;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+  <div class="joy" id="joy"></div>
+
+  <script src="js/nipplejs.min.js"></script>
+  <script src="js/three.min.js"></script>
+  <script src="js/OrbitControls.min.js"></script>
+
+  <script type="text/javascript">
+  
+
+THREE.SpriteSheetTexture = function(
+    imageURL,
+    framesX,
+    frameDelay,
+    _endFrame
+) {
+    var timer,
+        frameWidth,
+        frameHeight,
+        x = (y = count = startFrame = 0),
+        endFrame = _endFrame || framesX,
+        canvas = document.createElement("canvas"),
+        ctx = canvas.getContext("2d"),
+        canvasTexture = new THREE.CanvasTexture(canvas),
+        img = new Image();
+
+    img.crossOrigin = "Anonymous";
+    img.onload = function() {
+        canvas.width = frameWidth = img.width / framesX;
+        canvas.height = frameHeight = img.height;
+        timer = setInterval(nextFrame, frameDelay);
+    };
+    img.src = imageURL;
+
+    function nextFrame() {
+        count++;
+
+        if (count >= endFrame) {
+            count = 0;
+        }
+
+        x = (count % framesX) * frameWidth;
+        y = ((count / framesX) | 0) * frameHeight;
+
+        ctx.clearRect(0, 0, frameWidth, frameHeight);
+        ctx.drawImage(
+            img,
+            x,
+            y,
+            frameWidth,
+            frameHeight,
+            0,
+            0,
+            frameWidth,
+            frameHeight
+        );
+
+        canvasTexture.needsUpdate = true;
+    }
+
+    return canvasTexture;
+};
+
+  // globals
+  var revcounter = 0;
+  var topspeed = 5;
+  var slowdown = false;
+  var timerID;
+
+// controller
+var joy = nipplejs.create({
+  zone: document.getElementById('joy'),
+  mode: 'static',
+  restOpacity: 0.2,
+  // lockX: true,
+  position: {
+    left: '50%',
+    bottom: '100px'
+  }
+});
+
+joy.on('move dir start', function (evt, data) {
+  if (!data.direction) { return; } 
+  else {
+    accelerate();
+
+if (data.direction.x=='right') {
+  if (hero.position.x < 10) {
+    hero.position.x+=data.force/6;
+  }
+}//right
+
+if (data.direction.x=='left') {
+ if (hero.position.x > -10) 
+  {hero.position.x-=data.force/6;
+ }
+}//left
+
+if (data.direction.y=='up') {
+	if (hero.position.z > -10) {
+    hero.position.z-=data.force/6;
+  }
+}//up
+
+if (data.direction.y=='down') {
+	if (hero.position.z < 10) {
+    hero.position.z+=data.force/6;
+  }
+}//down
+
+}// end if
+});// on start joystick
+
+
+joy.on('end', function (evt, data) {
+decelerate();
+});// on end
+
+// THREE JS
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+var renderer = new THREE.WebGLRenderer();
+renderer.setSize( window.innerWidth, window.innerHeight );
+document.body.appendChild( renderer.domElement );
+
+// lights
+var light = new THREE.PointLight( 0xffffff, 1, 120 );
+light.position.set( 10, 50, 10 );
+scene.add( light );
+// ambient
+var light = new THREE.AmbientLight( 0x666666 );
+light.intensity = 0.9;
+scene.add( light );
+
+//  camera
+camera.position.y = 20;
+
+//  controls
+controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableKeys = false;
+controls.enablePan = false;
+controls.minAzimuthAngle = -0.6;
+controls.maxAzimuthAngle = 0.6;
+
+//  groups
+hero = new THREE.Group();
+scene.add( hero );
+hero.position.set (0,0.5,0);
+
+//  hero object
+var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+var cube = new THREE.Mesh( geometry, material );
+hero.add( cube );
+
+// ground
+
+runtexture = new THREE.SpriteSheetTexture(
+  "assets/map-part.png",
+  8,
+  100,
+  8
+);
+// ground texture
+var material = new THREE.MeshBasicMaterial( {
+  color: 0xffffff 
+  // ,transparent : true, opacity:0.9
+  ,map:runtexture, side:THREE.DoubleSide
+ } );
+
+
+
+var groundplane = new THREE.Mesh( geometry, material );
+groundplane.rotation.set (-Math.PI/2,0,0);
+ground.position.set (0,-0.5,0);
+scene.add( groundplane );
+
+
+//
+function accelerate(e) {
+  slowdown = false;
+  stopwarp = false;
+  timerID = cancelAnimationFrame(slowtimer);
+  timerID = requestAnimationFrame(timer);
+  if (e) {e.preventDefault();}
+}
+
+function decelerate(e) {
+  slowdown = true;
+  stopwarp = true; 
+  timerID = cancelAnimationFrame(timerID);
+  timerID = requestAnimationFrame(slowtimer);
+  if (e) {e.preventDefault();}
+}
+
+
+function slowtimer() {
+        revcounter = revcounter-0.1;
+        if (revcounter<0.1) {
+          revcounter=0; 
+          cancelAnimationFrame(slowtimer); 
+          return;
+        } else {
+          requestAnimationFrame(slowtimer);
+        }
+      }
+
+
+
+      function timer() { 
+        if (revcounter < topspeed || slowdown == true) {
+          timerID = requestAnimationFrame(timer);
+        revcounter = revcounter+0.1;
+      }
+    }
+
+
+// resize window
+window.addEventListener( 'resize', onWindowResize, false );
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize( window.innerWidth, window.innerHeight );
+}
+
+
+//keyboard controls
+document.onkeydown = function(evt) {
+  evt = evt || window.event;
+    // console.log(evt)
+  if (evt.keyCode == 38) { //up
+    evt.preventDefault();
+    accelerate();
+  }
+  if (evt.keyCode == 40) { //down
+    evt.preventDefault();
+    decelerate();
+  }
+};// keys
+
+
+// render loop
+var animate = function () {
+  // groundtex.offset.y += revcounter/200;
+  controls.update();
+  requestAnimationFrame( animate );
+  renderer.render(scene, camera);
+};
+
+// start
+animate();
+
+</script>
+</body>
+</html>
