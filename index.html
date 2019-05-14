@@ -23,9 +23,65 @@
   <script src="js/OrbitControls.min.js"></script>
 
   <script type="text/javascript">
+  
+
+THREE.SpriteSheetTexture = function(
+    imageURL,
+    framesX,
+    frameDelay,
+    _endFrame
+) {
+    var timer,
+        frameWidth,
+        frameHeight,
+        x = (y = count = startFrame = 0),
+        endFrame = _endFrame || framesX,
+        canvas = document.createElement("canvas"),
+        ctx = canvas.getContext("2d"),
+        canvasTexture = new THREE.CanvasTexture(canvas),
+        img = new Image();
+
+    img.crossOrigin = "Anonymous";
+    img.onload = function() {
+        canvas.width = frameWidth = img.width / framesX;
+        canvas.height = frameHeight = img.height;
+        timer = setInterval(nextFrame, frameDelay);
+    };
+    img.src = imageURL;
+
+    function nextFrame() {
+        // count++;
+        count += revcounter/100;
+
+        if (count >= endFrame) {
+            count = 0;
+        }
+
+        x = (count % framesX) * frameWidth;
+        y = ((count / framesX) | 0) * frameHeight;
+
+        ctx.clearRect(0, 0, frameWidth, frameHeight);
+        ctx.drawImage(
+            img,
+            x,
+            y,
+            frameWidth,
+            frameHeight,
+            0,
+            0,
+            frameWidth,
+            frameHeight
+        );
+
+        canvasTexture.needsUpdate = true;
+    }
+
+    return canvasTexture;
+};
+
   // globals
   var revcounter = 0;
-  var topspeed = 5;
+  var topspeed = 10;
   var slowdown = false;
   var timerID;
 
@@ -116,29 +172,28 @@ var cube = new THREE.Mesh( geometry, material );
 hero.add( cube );
 
 // ground
-// underlay colour
-var geometry = new THREE.PlaneBufferGeometry( 40, 40, 1 );
+runtexture = new THREE.SpriteSheetTexture(
+    "assets/17x.png",
+    17,
+    100,
+    17
+);
+runtexture.magFilter = THREE.NearestFilter;
+runtexture.minFilter = THREE.LinearMipMapLinearFilter;
 
-var material = new THREE.MeshLambertMaterial( {color: 0x333333} );
-var ground = new THREE.Mesh( geometry, material );
-ground.rotation.set (-Math.PI/2,0,0);
-ground.position.set (0,-0.5,0);
-scene.add( ground );
 
-
-// texture
-var txloader = new THREE.TextureLoader();
-groundtex = txloader.load( 'assets/tex.png' );
-groundtex.magFilter = THREE.NearestFilter;
-groundtex.minFilter = THREE.LinearMipMapLinearFilter;
-groundtex.wrapS = groundtex.wrapT = THREE.RepeatWrapping;
 // ground texture
-var material = new THREE.MeshBasicMaterial( {color: 0xff0000 
-  ,transparent : true, opacity:0.9
-  ,map:groundtex    } );
+var material = new THREE.MeshBasicMaterial( {
+  color: 0xffffff 
+  ,map:runtexture
+  // , side:THREE.DoubleSide
+ } );
+
+
+var geometry = new THREE.PlaneBufferGeometry( 40, 40, 1 );
 var groundplane = new THREE.Mesh( geometry, material );
-groundplane.rotation.set (-Math.PI/2,0,0);
-ground.position.set (0,-0.5,0);
+groundplane.rotation.set (-Math.PI/2,0,Math.PI/2);
+groundplane.position.set (0,-0.5,0);
 scene.add( groundplane );
 
 
@@ -161,7 +216,7 @@ function decelerate(e) {
 
 
 function slowtimer() {
-        revcounter = revcounter-0.1;
+        revcounter = revcounter-1;
         if (revcounter<0.1) {
           revcounter=0; 
           cancelAnimationFrame(slowtimer); 
@@ -176,7 +231,7 @@ function slowtimer() {
       function timer() { 
         if (revcounter < topspeed || slowdown == true) {
           timerID = requestAnimationFrame(timer);
-        revcounter = revcounter+0.1;
+        revcounter = revcounter+1;
       }
     }
 
@@ -207,7 +262,7 @@ document.onkeydown = function(evt) {
 
 // render loop
 var animate = function () {
-  groundtex.offset.y += revcounter/200;
+  // groundtex.offset.y += revcounter/200;
   controls.update();
   requestAnimationFrame( animate );
   renderer.render(scene, camera);
