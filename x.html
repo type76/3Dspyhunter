@@ -50,13 +50,13 @@ THREE.SpriteSheetTexture = function(
     img.onload = function() {
         canvas.width = frameWidth = img.width / framesX;
         canvas.height = frameHeight = img.height;
-        timer = setInterval(nextFrame, frameDelay);
+        timer = setInterval(nextFrame, 1);
     };
     img.src = imageURL;
 
     function nextFrame() {
         // count++;
-        count += revcounter/100;
+        count += revcounter/2000;
         // count += revcounter/frameDelay;
 
         if (count >= endFrame) {
@@ -189,10 +189,10 @@ function playerupdate() {
     if (keyboard.isDown(keyboard.RIGHT)  && cursor.position.x<20)   {
         cursor.position.x += 0.5; 
     }
-    if (keyboard.isDown(keyboard.UP))   {
+    if (keyboard.isDown(keyboard.UP)  && cursor.position.z>-20)   {
         cursor.position.z -= 0.5; 
     }
-    if (keyboard.isDown(keyboard.DOWN))   {
+    if (keyboard.isDown(keyboard.DOWN)  && cursor.position.z<20)   {
         cursor.position.z += 0.5; 
     }
     if (keyboard.isDown(keyboard.Z))   {
@@ -202,34 +202,13 @@ function playerupdate() {
     if (keyboard.isDown(keyboard.X))   {
         decelerate();
     }
+
+    // position lerp
+hero.position.x += (cursor.position.x - hero.position.x)*0.6;
+hero.position.z += (cursor.position.z - hero.position.z)*0.6;
 }// move player
 
-// render loop
-function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-    controls.update();
-    playerupdate();
-    // position lerp
-hero.position.x += (cursor.position.x - hero.position.x)*0.3;
-hero.position.z += (cursor.position.z - hero.position.z)*0.3;
-
-
-}
-
-
-// START HERE >>>>>
-window.addEventListener('load', initialise, false);
-
-function initialise(){
-init();
-animate();
-}
-
-
-
-//
-
+// speedo
 //go
 function accelerate(e) {
   slowdown = false;
@@ -238,6 +217,7 @@ function accelerate(e) {
   timerID = requestAnimationFrame(timer);
   if (e) {e.preventDefault();}
 }
+
 // brake
 function decelerate(e) {
   slowdown = true;
@@ -257,7 +237,7 @@ function slowtimer() {
         } else {
           requestAnimationFrame(slowtimer);
         }
-      }
+}
 
 
 // speed up
@@ -266,7 +246,24 @@ function timer() {
           timerID = requestAnimationFrame(timer);
         revcounter = revcounter+0.1;
       }
-    }
+}
+
+// render loop
+function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+    controls.update();
+    playerupdate();
+}
+
+
+// START HERE >>>>>
+window.addEventListener('load', initialise, false);
+
+function initialise(){
+init();
+animate();
+}
 
 </script>
 </body>
