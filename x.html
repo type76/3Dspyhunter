@@ -102,11 +102,17 @@ THREE.SpriteSheetTexture = function(
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enablePan = false;
 
+// hero
+hero = new THREE.Group();
+scene.add( hero );
+cursor = new THREE.Group();
+scene.add(cursor);
+
 //  hero object
 var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-hero = new THREE.Mesh( geometry, material );
-scene.add( hero );
+var material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+cube = new THREE.Mesh( geometry, material );
+hero.add( cube );
 
 
 // ground
@@ -177,17 +183,17 @@ function onWindowResize() {
 
 // player movement update
 function playerupdate() {
-    if (keyboard.isDown(keyboard.LEFT))   {
-        hero.position.x -= 1; 
+    if (keyboard.isDown(keyboard.LEFT) && cursor.position.x>-20)   {
+        cursor.position.x -= 0.5; 
     }
-    if (keyboard.isDown(keyboard.RIGHT))   {
-        hero.position.x += 1; 
+    if (keyboard.isDown(keyboard.RIGHT)  && cursor.position.x<20)   {
+        cursor.position.x += 0.5; 
     }
     if (keyboard.isDown(keyboard.UP))   {
-        hero.position.z -= 1; 
+        cursor.position.z -= 0.5; 
     }
     if (keyboard.isDown(keyboard.DOWN))   {
-        hero.position.z += 1; 
+        cursor.position.z += 0.5; 
     }
     if (keyboard.isDown(keyboard.Z))   {
         accelerate();
@@ -204,6 +210,11 @@ function animate() {
     renderer.render(scene, camera);
     controls.update();
     playerupdate();
+    // position lerp
+hero.position.x += (cursor.position.x - hero.position.x)*0.3;
+hero.position.z += (cursor.position.z - hero.position.z)*0.3;
+
+
 }
 
 
