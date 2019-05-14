@@ -7,112 +7,139 @@
     <style>
     html, body {background: #222;}
     body {display: block; margin: 0 auto; padding: 0;  color: #fff; overflow: hidden; font-family: monospace;}
-        canvas {width: 100%; height: 100%; display: block; position: absolute;}
-        #cntrls {position: absolute; z-index: 2; padding: 0; margin: 8px;}
-    </style>
+    canvas {width: 100%; height: 100%; display: block; position: absolute;}
+    #cntrls {position: absolute; z-index: 2; padding: 0; margin: 8px;}
+</style>
 </head>
 <body>
-<p id="cntrls">
-controls: up|down|left|right <br>
-accelerate:z <br>
-brake:x</p>
+    <p id="cntrls">
+        controls: up|down|left|right <br>
+        accelerate:z <br>
+        brake:x</p>
 
-    <script src="js/three.min.js"></script>
-    <script src="js/OrbitControls.min.js"></script>
+        <script src="js/three.min.js"></script>
+        <script src="js/OrbitControls.min.js"></script>
 
-    <script>
-var hero;
-var revcounter = 0;
-var topspeed = 10;
-var slowdown = false;
-var timerID;
-var width = window.innerWidth,
-height = window.innerHeight;
-var camera, scene, renderer, geometry, texture, mesh, controls, keyboard;
+        <script>
+        var hero;
+        var revcounter = 0;
+        var topspeed = 10;
+        var slowdown = false;
+        var timerID;
+        var plasmaBalls = [];
+var speed = 50;
+var clock = new THREE.Clock();
+var delta = 0;
+        var width = window.innerWidth,
+        height = window.innerHeight;
+        var camera, scene, renderer, geometry, texture, mesh, controls, keyboard;
 
-THREE.SpriteSheetTexture = function(
-    imageURL,
-    framesX,
-    frameDelay,
-    _endFrame
-) {
-    var timer,
-        frameWidth,
-        frameHeight,
-        x = (y = count = startFrame = 0),
-        endFrame = _endFrame || framesX,
-        canvas = document.createElement("canvas"),
-        ctx = canvas.getContext("2d"),
-        canvasTexture = new THREE.CanvasTexture(canvas),
-        img = new Image();
-
-    img.crossOrigin = "Anonymous";
-    img.onload = function() {
-        canvas.width = frameWidth = img.width / framesX;
-        canvas.height = frameHeight = img.height;
-        timer = setInterval(nextFrame, 1);
-    };
-    img.src = imageURL;
-
-    function nextFrame() {
-        // count++;
-        count += revcounter/2000;
-        // count += revcounter/frameDelay;
-
-        if (count >= endFrame) {
-            count = 0;
-        }
-
-        x = count*frameDelay;
-        y = 0;
-
-        ctx.clearRect(0, 0, frameWidth, frameHeight);
-        ctx.drawImage(
-            img,
-            x,
-            y,
+        THREE.SpriteSheetTexture = function(
+            imageURL,
+            framesX,
+            frameDelay,
+            _endFrame
+            ) {
+            var timer,
             frameWidth,
             frameHeight,
-            0,
-            0,
-            frameWidth,
-            frameHeight
-        );
+            x = (y = count = startFrame = 0),
+            endFrame = _endFrame || framesX,
+            canvas = document.createElement("canvas"),
+            ctx = canvas.getContext("2d"),
+            canvasTexture = new THREE.CanvasTexture(canvas),
+            img = new Image();
 
-        canvasTexture.needsUpdate = true;
-    }
+            img.crossOrigin = "Anonymous";
+            img.onload = function() {
+                canvas.width = frameWidth = img.width / framesX;
+                canvas.height = frameHeight = img.height;
+                timer = setInterval(nextFrame, 1);
+            };
+            img.src = imageURL;
 
-    return canvasTexture;
+            function nextFrame() {
+// count++;
+count += revcounter/2000;
+// count += revcounter/frameDelay;
+
+if (count >= endFrame) {
+    count = 0;
+}
+
+x = count*frameDelay;
+y = 0;
+
+ctx.clearRect(0, 0, frameWidth, frameHeight);
+ctx.drawImage(
+    img,
+    x,
+    y,
+    frameWidth,
+    frameHeight,
+    0,
+    0,
+    frameWidth,
+    frameHeight
+    );
+
+canvasTexture.needsUpdate = true;
+}
+
+return canvasTexture;
 };
 
 
-    function init() {
-        renderer = new THREE.WebGLRenderer({
-            antialias: true
-        });
-        renderer.setSize(width, height);
-        document.body.appendChild(renderer.domElement);
+function init() {
+    renderer = new THREE.WebGLRenderer({
+        antialias: true
+    });
+    renderer.setSize(width, height);
+    document.body.appendChild(renderer.domElement);
 
-        scene = new THREE.Scene();
+    scene = new THREE.Scene();
 
-        camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 1000);
-        camera.position.z = 0.1;
-        camera.position.y = 20;
-        scene.add(camera);
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enablePan = false;
+    camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 1000);
+    camera.position.z = 0.1;
+    camera.position.y = 20;
+    scene.add(camera);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enablePan = false;
+// ambient light
+var ambient = new THREE.AmbientLight(0xffffff);
+ambient.intensity = 0.7;
+scene.add(ambient);
 
-// hero
+// lights
+var light = new THREE.PointLight(0xffffff, 1, 100);
+light.position.set(50, 50, 10);
+scene.add(light);
+
+// hero bounding box
 hero = new THREE.Group();
 scene.add( hero );
+// 3D cursor
 cursor = new THREE.Group();
 scene.add(cursor);
 
+
 //  hero object
-var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-var material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
-cube = new THREE.Mesh( geometry, material );
-hero.add( cube );
+let bgeometry = new THREE.BoxGeometry( 1, 0.1, 1.5 );
+let mmaterial = new THREE.MeshLambertMaterial( { color: 0xcccccc } );
+let cubicbody = new THREE.Mesh( bgeometry, mmaterial );
+cubicbody.position.set(0,0,0);
+hero.add( cubicbody );
+
+// shadow 
+let egeometry = new THREE.PlaneGeometry(1, 1.5, 1);
+let ematerial = new THREE.MeshLambertMaterial({
+    color: 0x333333
+});
+let shdw = new THREE.Mesh(egeometry, ematerial);
+shdw.position.set(0, -0.3, 0);
+shdw.rotation.set(-Math.PI / 2, 0, 0)
+cursor.add(shdw);
+
 
 
 // ground
@@ -121,17 +148,17 @@ runtexture = new THREE.SpriteSheetTexture(
     17,
     100,
     17
-);
+    );
 runtexture.magFilter = THREE.NearestFilter;
 runtexture.minFilter = THREE.LinearMipMapLinearFilter;
 
 
 // ground texture
 var material = new THREE.MeshBasicMaterial( {
-  color: 0xffffff 
-  ,map:runtexture
-  // , side:THREE.DoubleSide
- } );
+    color: 0xffffff 
+    ,map:runtexture
+// , side:THREE.DoubleSide
+} );
 
 
 var geometry = new THREE.PlaneBufferGeometry( 40, 40, 1 );
@@ -140,6 +167,21 @@ groundplane.rotation.set (-Math.PI/2,0,Math.PI/2);
 groundplane.position.set (0,-0.5,0);
 scene.add( groundplane );
 
+//
+
+var weapon = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 1.5), new THREE.MeshBasicMaterial({
+  color: 0x666666
+}));
+
+
+
+weapon.position.set(0, 0.1, -0.5);
+hero.add(weapon);
+emitter = new THREE.Object3D();
+emitter.position.set(0, 1, 5);
+hero.add(emitter);
+
+// emitter.getWorldPosition(weapon)
 
 // keys
 keyboard = {
@@ -151,6 +193,7 @@ keyboard = {
     DOWN: 40,
     Z: 90,
     X: 88,
+    C: 67,
 
     isDown: function(keyCode) {
         return this._pressed[keyCode];
@@ -202,50 +245,68 @@ function playerupdate() {
     if (keyboard.isDown(keyboard.X))   {
         decelerate();
     }
+    if (keyboard.isDown(keyboard.C))   {
+        shoot();
+    }
 
-    // position lerp
+// // position lerp
 hero.position.x += (cursor.position.x - hero.position.x)*0.6;
 hero.position.z += (cursor.position.z - hero.position.z)*0.6;
+// rotation lerp
+hero.rotation.y = -(cursor.position.x - hero.position.x)*0.9;
+hero.rotation.x = (cursor.position.z - hero.position.z)*0.9;
+
 }// move player
 
 // speedo
 //go
 function accelerate(e) {
-  slowdown = false;
-  stopwarp = false;
-  timerID = cancelAnimationFrame(slowtimer);
-  timerID = requestAnimationFrame(timer);
-  if (e) {e.preventDefault();}
+    slowdown = false;
+    stopwarp = false;
+    timerID = cancelAnimationFrame(slowtimer);
+    timerID = requestAnimationFrame(timer);
+    if (e) {e.preventDefault();}
 }
 
 // brake
 function decelerate(e) {
-  slowdown = true;
-  stopwarp = true; 
-  timerID = cancelAnimationFrame(timerID);
-  timerID = requestAnimationFrame(slowtimer);
-  if (e) {e.preventDefault();}
+    slowdown = true;
+    stopwarp = true; 
+    timerID = cancelAnimationFrame(timerID);
+    timerID = requestAnimationFrame(slowtimer);
+    if (e) {e.preventDefault();}
 }
 
 // slow down
 function slowtimer() {
-        revcounter = revcounter-0.1;
-        if (revcounter<0.1) {
-          revcounter=0; 
-          cancelAnimationFrame(slowtimer); 
-          return;
-        } else {
-          requestAnimationFrame(slowtimer);
-        }
+    revcounter = revcounter-0.1;
+    if (revcounter<0.1) {
+        revcounter=0; 
+        cancelAnimationFrame(slowtimer); 
+        return;
+    } else {
+        requestAnimationFrame(slowtimer);
+    }
 }
 
 
 // speed up
 function timer() { 
-        if (revcounter < topspeed || slowdown == true) {
-          timerID = requestAnimationFrame(timer);
+    if (revcounter < topspeed || slowdown == true) {
+        timerID = requestAnimationFrame(timer);
         revcounter = revcounter+0.1;
-      }
+    }
+}
+
+//shoot
+function shoot() {
+let plasmaBall = new THREE.Mesh(new THREE.SphereGeometry(0.2, 4, 4), new THREE.MeshBasicMaterial({
+    color: "aqua"
+  }));
+  plasmaBall.position.copy(emitter.getWorldPosition()); // start position - the tip of the weapon
+  plasmaBall.quaternion.copy(cursor.quaternion); // apply camera's quaternion
+  scene.add(plasmaBall);
+  plasmaBalls.push(plasmaBall);
 }
 
 // render loop
@@ -254,6 +315,16 @@ function animate() {
     renderer.render(scene, camera);
     controls.update();
     playerupdate();
+    delta = clock.getDelta();
+
+  plasmaBalls.forEach(b => {
+     // move along the local z-axis
+    b.translateZ(-speed * delta);
+    // delete once out of frame
+    if (b.position.z<-30) {
+        scene.remove( b );}
+  });
+
 }
 
 
@@ -261,8 +332,8 @@ function animate() {
 window.addEventListener('load', initialise, false);
 
 function initialise(){
-init();
-animate();
+    init();
+    animate();
 }
 
 </script>
