@@ -23,7 +23,7 @@
         brake:x <br>
         shoot:c
     </p>
-    <canvas id="hitcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; top:10px; right:10px; display: none; z-index: 4; background: #222;"></canvas>
+    <canvas id="hitcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; top:10px; right:10px; display: block; z-index: 4; background: #222;"></canvas>
     <canvas id="colcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; bottom:10px; right:10px; z-index: 4; background: #333; display: none;"></canvas>
 
         <script src="js/three.min.js"></script>
@@ -62,7 +62,7 @@ var delta = 0;
 
 // 2D canvas update
 function changeCanvas() {
-count += revcounter/20;
+count += revcounter/4;
 
 // refresh colour canvas
 colctx.drawImage(colimg, 0, 0);
@@ -87,8 +87,8 @@ if (texData.data[0]>1) {document.body.classList='hit';} else {
     document.body.classList='';
 }
 // red dot
-// hitctx.fillStyle = "red";
-// hitctx.fillRect(xv, xu, 2, 2);
+hitctx.fillStyle = "red";
+hitctx.fillRect(xv, xu, 2, 2);
 }// canvas
 
 
@@ -261,7 +261,7 @@ hero.rotation.y = -(cursor.position.x - hero.position.x)*0.9;
 hero.rotation.x = (cursor.position.z - hero.position.z)*0.9;
 // red dot
 xu = 64+Math.floor( hero.position.x*100/32);
-xv = 64+Math.floor(hero.position.z*100/32);
+xv = 64-Math.floor(hero.position.z*100/32);
 runtexture.needsUpdate = true;
 
 }// move player
