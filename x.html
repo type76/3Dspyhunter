@@ -63,7 +63,7 @@ var delta = 0;
 // 2D canvas update
 function changeCanvas() {
 count += revcounter/4;
-
+if (count>2050) {count=0;}
 // refresh colour canvas
 colctx.drawImage(colimg, 0, 0);
 colctx.clearRect(0, 0, 128, 128);
@@ -142,15 +142,6 @@ shdw.position.set(0, -0.3, 0);
 shdw.rotation.set(-Math.PI / 2, 0, 0)
 cursor.add(shdw);
 
-
-
-// ground
-// runtexture = new THREE.SpriteSheetTexture(
-//     "assets/17x.png",
-//     17,
-//     100,
-//     17
-//     );
 
 runtexture = new THREE.Texture(colcanvas);
 runtexture.magFilter = THREE.NearestFilter;
