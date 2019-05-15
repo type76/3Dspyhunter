@@ -11,12 +11,10 @@
     #cntrls {position: absolute; z-index: 2; padding: 0; margin: 8px;}
     #alert {position: absolute; bottom: 12px; 
         left: 12px; z-index: 4; display: none; background: red !important; padding: 8px;}
-    .hit #alert {display: block;}
 
 </style>
 </head>
 <body>
-    <p id="alert">*HIT*</p>
     <p id="cntrls">
         controls: up|down|left|right <br>
         accelerate:z <br>
@@ -47,6 +45,7 @@
         var count = 0;
         var topspeed = 10;
         var slowdown = false;
+        var enginefail = false;
         var timerID;
         var plasmaBalls = [];
         var xu = 0;
@@ -62,7 +61,15 @@ var delta = 0;
 
 // 2D canvas update
 function changeCanvas() {
+  if (enginefail==true) {
+ count += ( 11 - revcounter ) * 0.3;
+     }  else {
 count += revcounter/4;
+   
+  }// if enginefail
+
+
+// count += revcounter/4;
 if (count>2050) {count=0;}
 // refresh colour canvas
 colctx.drawImage(colimg, 0, 0);
@@ -83,8 +90,10 @@ hitctx.drawImage(hitimg, count, 0,
 
 // check lookup colour
 texData = hitctx.getImageData(xv, xu, 128, 128);
-if (texData.data[0]>1) {document.body.classList='hit';} else {
-    document.body.classList='';
+if (texData.data[0]>1) {
+  enginefail = true;
+} else {
+    enginefail = false;
 }
 // red dot
 hitctx.fillStyle = "red";
@@ -307,6 +316,7 @@ let plasmaBall = new THREE.Mesh(new THREE.SphereGeometry(0.2, 4, 4), new THREE.M
   scene.add(plasmaBall);
   plasmaBalls.push(plasmaBall);
 }
+
 
 // render loop
 function animate() {
