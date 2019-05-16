@@ -114,8 +114,8 @@ if (texData.data[0]>1) {
 // hitctx.fillRect(xv, xu, 2, 2);
 // check lookup for position in x
 posData = hitctx.getImageData(60, 0, 1, 1);
-// hitctx.fillStyle = "blue";
-// hitctx.fillRect(60, 0, 2, 2);
+hitctx.fillStyle = "blue";
+hitctx.fillRect(60, 0, 2, 2);
 xposindex = posData.data[0];
 collidableMeshList[0].position.x = (xposindex-127)/2;
 }// canvas
@@ -160,11 +160,13 @@ scene.add(bulletgroup);
 
 
 //  hero object
-let bgeometry = new THREE.BoxGeometry( 1, 1, 1 );
-let mmaterial = new THREE.MeshLambertMaterial( { color: 0xcccccc, wireframe:true } );
+let bgeometry = new THREE.BoxGeometry( 1, 1, 1.8 );
+let mmaterial = new THREE.MeshLambertMaterial( { color: 0xcccccc, wireframe:true,
+transparent:true, opacity:0 } );
 cubicbody = new THREE.Mesh( bgeometry, mmaterial );
 cubicbody.position.set(0,0,0);
 hero.add( cubicbody );
+
 
 //
 let shootgeometry = new THREE.BoxGeometry( 1, 1, 1 );
@@ -175,14 +177,14 @@ hero.add( canonball );
 
 
 // shadow 
-let egeometry = new THREE.PlaneGeometry(1, 1.5, 1);
-let ematerial = new THREE.MeshLambertMaterial({
-  color: 0x333333
-});
-let shdw = new THREE.Mesh(egeometry, ematerial);
-shdw.position.set(0, -0.3, 0);
-shdw.rotation.set(-Math.PI / 2, 0, 0)
-cursor.add(shdw);
+// let egeometry = new THREE.PlaneGeometry(1, 1.5, 1);
+// let ematerial = new THREE.MeshLambertMaterial({
+//   color: 0x333333
+// });
+// let shdw = new THREE.Mesh(egeometry, ematerial);
+// shdw.position.set(0, -0.3, 0);
+// shdw.rotation.set(-Math.PI / 2, 0, 0)
+// cursor.add(shdw);
 
 
 runtexture = new THREE.Texture(colcanvas);
@@ -491,7 +493,13 @@ for (var vertexIndex = 0; vertexIndex < canonball.geometry.vertices.length; vert
 
 
     // set collectables speed/pos
-    // collidableMeshList[0].position.z += (revcounter/1000);
+    if (enginefail) {
+    xposindex = xposindex-(revcounter/10);
+    collidableMeshList[0].position.z -= (revcounter/10);
+    }
+    collidableMeshList[0].position.z -= (revcounter/200);
+    xposindex = xposindex+(revcounter/200);
+
     if (collidableMeshList[0].position.z > 20) {
         collidableMeshList[0].position.z = -20;
     }
@@ -554,7 +562,8 @@ window.addEventListener('load', initialise, false);
 
 function initialise(){
   init();
-  initcolliders()
+  initcolliders();
+  addship();
   animate();
 }
 
@@ -567,6 +576,50 @@ function explosion() {
 function tap() {
   new Audio("audio/tap2.wav").play();
 }
+
+
+
+function addship() {
+  // apple
+var loader = new THREE.ObjectLoader();
+loader.load( 'models/car.json', function ( object ) {
+    object.scale.set( 0.3, 0.3, 0.3 );
+    object.rotation.set( 0, Math.PI, 0 );
+    object.position.set( 0.4, 0, -0.2 );
+    object.name = "car";
+    hero.add( object );
+} );
+// // ship
+// var loader = new THREE.ObjectLoader();
+
+// loader.load(
+//   'models/car.json',
+//   function ( geometry ) {
+// var cartex = new THREE.TextureLoader().load( 'models/CarTextureRed.png' );
+
+// cartex.magFilter = THREE.NearestFilter;
+// cartex.minFilter = THREE.LinearMipMapLinearFilter;
+
+//     var material = new THREE.MeshBasicMaterial( { 
+//           color: 0xffffff, map:cartex
+//       // combine: THREE.MultiplyOperation,
+//        } );
+
+
+//     var object = new THREE.Mesh( geometry, material );
+//     object.name = "mothership"
+//     object.position.set(0,0.35, -0.2);
+//     hero.add( object );
+
+// },
+//   function ( xhr ) {
+//   },
+//   function ( xhr ) {
+//     console.log( 'An error happened' );
+//   }
+//   );// end load ship
+}
+
 
 
 </script>
