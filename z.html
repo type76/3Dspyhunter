@@ -26,7 +26,7 @@
   <script src="js/OrbitControls.min.js"></script>
 
   <script>
-
+  var exceeded = false;
   var hitcanvas = document.getElementById('hitcanvas'),
   hitctx = hitcanvas.getContext('2d');
   var hitimg = new Image();
@@ -260,12 +260,13 @@ function playerupdate() {
     decelerate();
   }
   if (keyboard.isDown(keyboard.C))   {
-// clear/reset array
-bullets=[];
-canonball.position.z = 0;
-emitter.position.z = 0;
-shoot();
-}
+    // clear/reset array
+    bullets=[];
+    canonball.position.z = 0;
+    emitter.position.z = 0;
+    exceeded = false;
+    shoot();
+  }
 
 // // position lerp
 hero.position.x += (cursor.position.x - hero.position.x)*0.6;
@@ -322,12 +323,9 @@ function timer() {
 
 //shoot
 function shoot() {
-
-// if (bullets.length>3) {return}
-// let bullet = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-canonball.position.copy(emitter.getWorldPosition()); // start position
-canonball.quaternion.copy(cursor.quaternion); // apply camera's quaternion
-
+canonball.visible = true;
+canonball.position.copy(emitter.getWorldPosition());
+canonball.quaternion.copy(cursor.quaternion);
 bulletgroup.add(canonball);
 bullets.push(canonball);
 }
@@ -413,6 +411,31 @@ function hit(v) {
 } //if
 } // fn hit
 
+// BULLET HIT
+function bullethit(v) {
+  if (v.length > 0) {
+bullets=[];
+canonball.position.z = -10000;
+// emitter.position.z = 0;
+
+    var num2 = Math.floor(Math.random() * 5) + 1;
+    num2 *= Math.floor(Math.random() * 2) == 1 ? 1 : -1;
+    v[0].object.position.x = num2;
+    v[0].object.position.z = startpoz;
+
+    if (v[0].object.name == 'good') {
+      goodshoot();
+    }
+    if (v[0].object.name == 'bad') {
+      badshoot();
+    }
+    if (v[0].object.name == 'seeker') {
+      seekshoot();
+    }
+
+
+} //if
+} // fn bullethit
 
 function collisions() {
 // ship hitbox
@@ -427,7 +450,7 @@ for (var vertexIndex = 0; vertexIndex < cubicbody.geometry.vertices.length; vert
     console.log('hit');
   hit(collisionResults)
 }
-//
+// bullet hitbox
 for (var vertexIndex = 0; vertexIndex < canonball.geometry.vertices.length; vertexIndex++) {
   var localVertex = canonball.geometry.vertices[vertexIndex].clone();
   var globalVertex = localVertex.applyMatrix4(canonball.matrix);
@@ -437,8 +460,26 @@ for (var vertexIndex = 0; vertexIndex < canonball.geometry.vertices.length; vert
   var collisionResults = vray.intersectObjects(collidableMeshList);
   if (collisionResults.length > 0 && collidableMeshList.distance < directionVector.length())
     console.log('hit');
-  hit(collisionResults)
+  bullethit(collisionResults)
 }
+    // **** heat seeker
+          // set bad
+          var distance = collidableMeshList[2].position.distanceTo( hero.position );
+          if (distance<0.001) {return}
+        collidableMeshList[2].position.x += (hero.position.x - collidableMeshList[2].position.x) * 0.01;
+        collidableMeshList[2].position.z += (hero.position.z - collidableMeshList[2].position.z) * 0.01;
+
+
+    // set collectables speed/pos
+    collidableMeshList[0].position.z += (revcounter/50);
+    if (collidableMeshList[0].position.z > 20) {
+        collidableMeshList[0].position.z = -20;
+    }
+    // set bad
+    collidableMeshList[1].position.z += (revcounter/50);
+    if (collidableMeshList[1].position.z > 20) {
+        collidableMeshList[1].position.z = -20;
+    }
 }//collisions
 
 
@@ -446,6 +487,22 @@ for (var vertexIndex = 0; vertexIndex < canonball.geometry.vertices.length; vert
 function goodhit() {console.log('good')}
 function badhit() {console.log('bad')}
 function seekhit() {console.log('seek')}
+
+function goodshoot() {
+console.log('good');
+explosion();
+}
+
+function badshoot() {
+console.log('bad');
+explosion();
+}
+
+function seekshoot() {
+console.log('seek');
+explosion();
+}
+
 
 
 
@@ -460,13 +517,16 @@ function animate() {
   collisions();
   delta = clock.getDelta();
 
-  bullets.forEach(b => {
+  // bullets.forEach(b => {
 // move along z-axis
-b.translateZ(-speed * delta);
+if (!exceeded) {canonball.translateZ(-speed * delta);}
 // delete once out of frame
-if (b.position.z<-30) {
-  scene.remove( b );}
-});
+if (canonball.position.z<-30) {
+  exceeded = true;
+  scene.remove( canonball );
+  // canonball.visible = false;
+}
+// });
 }
 
 // START HERE >>>>>
@@ -476,6 +536,16 @@ function initialise(){
   init();
   initcolliders()
   animate();
+}
+
+// AUDIO
+// boost sound
+function explosion() {
+  new Audio("audio/explode2.wav").play();
+}
+
+function tap() {
+  new Audio("audio/tap2.wav").play();
 }
 
 
