@@ -500,8 +500,8 @@ for (var vertexIndex = 0; vertexIndex < canonball.geometry.vertices.length; vert
     collidableMeshList[0].position.z -= (revcounter/200);
     xposindex = xposindex+(revcounter/200);
 
-    if (collidableMeshList[0].position.z > 20) {
-        collidableMeshList[0].position.z = -20;
+    if (collidableMeshList[0].position.z > 20 || collidableMeshList[0].position.z < -20) {
+        collidableMeshList[0].position.z = 20;
     }
     // set bad
     // collidableMeshList[1].position.z += (revcounter/1000);
