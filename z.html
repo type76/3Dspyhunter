@@ -61,7 +61,7 @@
   var bullets = [];
   var xu = 0;
   var xv = 0;
-  var startpoz = 0;
+  var startpoz = 20;
   var collidableMeshList = [];
   var speed = 50;
   var clock = new THREE.Clock();
@@ -113,9 +113,11 @@ if (texData.data[0]>1) {
 // hitctx.fillStyle = "red";
 // hitctx.fillRect(xv, xu, 2, 2);
 // check lookup for position in x
-posData = hitctx.getImageData(60, 0, 1, 1);
+// console.log(((-collidableMeshList[0].position.z+10*6.4)-44)*3.2)
+var xx =((-collidableMeshList[0].position.z+10*6.4)-44)*3.2;
+posData = hitctx.getImageData(xx, 0, 1, 1);
 hitctx.fillStyle = "blue";
-hitctx.fillRect(60, 0, 2, 2);
+hitctx.fillRect(xx, 0, 2, 2);
 xposindex = posData.data[0];
 collidableMeshList[0].position.x = (xposindex-127)/2;
 }// canvas
@@ -172,7 +174,7 @@ hero.add( cubicbody );
 let shootgeometry = new THREE.BoxGeometry( 1, 1, 1 );
 let shootmaterial = new THREE.MeshBasicMaterial( { color: 0xffffff } );
 canonball = new THREE.Mesh( shootgeometry, shootmaterial );
-canonball.position.set(0,0,0);
+canonball.position.set(0,0,1000);
 hero.add( canonball );
 
 
@@ -545,16 +547,16 @@ function animate() {
   changeCanvas();
   delta = clock.getDelta();
 
-  // bullets.forEach(b => {
+  bullets.forEach(b => {
 // move along z-axis
 if (!exceeded) {canonball.translateZ(-speed * delta);}
 // delete once out of frame
-if (canonball.position.z<-30) {
+if (canonball.position.z < -20) {
   exceeded = true;
   scene.remove( canonball );
-  // canonball.visible = false;
+  canonball.visible = false;
 }
-// });
+});
 }
 
 // START HERE >>>>>
