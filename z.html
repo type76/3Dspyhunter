@@ -30,7 +30,7 @@
     brake:x <br>
     shoot:c
   </p>
-  <canvas id="hitcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; top:10px; right:10px; display: block; z-index: 4; background: #222;"></canvas>
+  <canvas id="hitcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; top:10px; right:10px; display: none; z-index: 4; background: #222;"></canvas>
   <canvas id="colcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; bottom:10px; right:10px; z-index: 4; background: #333; display: none;"></canvas>
 
   <script src="js/three.min.js"></script>
@@ -156,7 +156,7 @@ scene.add( hero );
 cursor = new THREE.Group();
 scene.add(cursor);
 cursor.position.z=2;
-// bullergroup
+// bulletgroup
 bulletgroup = new THREE.Group();
 scene.add(bulletgroup);
 
@@ -370,21 +370,18 @@ function stoptab() {
 
 // collide objects
 function initcolliders() {
-  var collidergeo = new THREE.CubeGeometry(0.5, 0.5, 0.5);
+  var collidergeo = new THREE.CubeGeometry(0.5, 0.5, 1.7);
 
   var yellowc = new THREE.MeshBasicMaterial({
-    color: 0xffff00
+    color: 0xffff00, wireframe:true,
+    transparent:true, opacity:0
   });
-  var cgood = new THREE.Mesh(collidergeo, yellowc);
+  cgood = new THREE.Mesh(collidergeo, yellowc);
   cgood.position.set(3, 0.5, startpoz);
   cgood.name = 'good';
   scene.add(cgood);
-// cgood.visible = false;
-collidableMeshList.push(cgood);
-// bonus light
-bonuslight = new THREE.PointLight( 0xffffff, 1, 15 );
-bonuslight.position.set( 0, -10, 0 );
-cgood.add( bonuslight );
+  collidableMeshList.push(cgood);
+
 
 // bad collider
 var cbad = new THREE.Mesh(collidergeo, yellowc);
@@ -502,9 +499,19 @@ for (var vertexIndex = 0; vertexIndex < canonball.geometry.vertices.length; vert
     collidableMeshList[0].position.z -= (revcounter/200);
     xposindex = xposindex+(revcounter/200);
 
-    if (collidableMeshList[0].position.z > 20 || collidableMeshList[0].position.z < -20) {
-        collidableMeshList[0].position.z = 20;
+    if (collidableMeshList[0].position.z > 26 || collidableMeshList[0].position.z < -20) {
+        collidableMeshList[0].position.z = 25;
     }
+    
+    // // baddie position lerp
+var trk = scene.getObjectByProperty( 'name', 'truck', false );
+
+trk.position.x += (cgood.position.x - trk.position.x)*0.4;
+trk.position.z += (cgood.position.z - trk.position.z)*0.4;
+// rotation lerp
+trk.rotation.y = 1.5-(cgood.position.x - trk.position.x)*0.4;
+trk.rotation.x = (cgood.position.z - trk.position.z)*0.4;
+
     // set bad
     // collidableMeshList[1].position.z += (revcounter/1000);
     // if (collidableMeshList[1].position.z > 20) {
@@ -535,6 +542,37 @@ explosion();
 
 
 
+// AUDIO
+// boost sound
+function explosion() {
+  new Audio("audio/explode2.wav").play();
+}
+
+function tap() {
+  new Audio("audio/tap2.wav").play();
+}
+
+
+// 3D models
+function addship() {
+  // car
+var loader = new THREE.ObjectLoader();
+loader.load( 'models/car.json', function ( object ) {
+    object.scale.set( 0.3, 0.3, 0.3 );
+    object.rotation.set( 0, Math.PI, 0 );
+    object.position.set( 0.4, 0, -0.2 );
+    object.name = "car";
+    hero.add( object );
+} );
+  // truck
+var loader = new THREE.ObjectLoader();
+loader.load( 'models/truck.json', function ( object ) {
+    object.scale.set( 0.3, 0.3, 0.3 );
+    object.position.set( 0.15, -0.4, 0 );
+    object.name = "truck";
+    scene.add( object );
+} );
+}
 
 // render loop
 function animate() {
@@ -564,63 +602,13 @@ window.addEventListener('load', initialise, false);
 
 function initialise(){
   init();
-  initcolliders();
   addship();
-  animate();
+  initcolliders();
+    setTimeout(function() {
+      animate();
+    }, 100);
 }
 
-// AUDIO
-// boost sound
-function explosion() {
-  new Audio("audio/explode2.wav").play();
-}
-
-function tap() {
-  new Audio("audio/tap2.wav").play();
-}
-
-
-
-function addship() {
-  // apple
-var loader = new THREE.ObjectLoader();
-loader.load( 'models/car.json', function ( object ) {
-    object.scale.set( 0.3, 0.3, 0.3 );
-    object.rotation.set( 0, Math.PI, 0 );
-    object.position.set( 0.4, 0, -0.2 );
-    object.name = "car";
-    hero.add( object );
-} );
-// // ship
-// var loader = new THREE.ObjectLoader();
-
-// loader.load(
-//   'models/car.json',
-//   function ( geometry ) {
-// var cartex = new THREE.TextureLoader().load( 'models/CarTextureRed.png' );
-
-// cartex.magFilter = THREE.NearestFilter;
-// cartex.minFilter = THREE.LinearMipMapLinearFilter;
-
-//     var material = new THREE.MeshBasicMaterial( { 
-//           color: 0xffffff, map:cartex
-//       // combine: THREE.MultiplyOperation,
-//        } );
-
-
-//     var object = new THREE.Mesh( geometry, material );
-//     object.name = "mothership"
-//     object.position.set(0,0.35, -0.2);
-//     hero.add( object );
-
-// },
-//   function ( xhr ) {
-//   },
-//   function ( xhr ) {
-//     console.log( 'An error happened' );
-//   }
-//   );// end load ship
-}
 
 
 
