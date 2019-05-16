@@ -41,13 +41,13 @@
   var hitcanvas = document.getElementById('hitcanvas'),
   hitctx = hitcanvas.getContext('2d');
   var hitimg = new Image();
-  hitimg.src = 'assets/17bw2.png';
+  hitimg.src = 'assets/hitbg.png';
   var xamnt;
   var active = true
   colcanvas = document.getElementById('colcanvas'),
   colctx = colcanvas.getContext('2d');
   var colimg = new Image();
-  colimg.src = 'assets/17x.png';
+  colimg.src = 'assets/bg.png';
 
   var hero;
   var revcounter = 0;
@@ -84,7 +84,7 @@ if (enginefail==true && revcounter>0) {
 
 count += revcounter/4;
 
-if (count>2050) {count=0;}
+if (count>(2304-128)) {count=0;}
 // refresh colour canvas
 colctx.drawImage(colimg, 0, 0);
 colctx.clearRect(0, 0, 128, 128);
@@ -110,15 +110,13 @@ if (texData.data[0]>1) {
   enginefail = false;
 }
 // red dot
-hitctx.fillStyle = "red";
-hitctx.fillRect(xv, xu, 2, 2);
+// hitctx.fillStyle = "red";
+// hitctx.fillRect(xv, xu, 2, 2);
 // check lookup for position in x
 posData = hitctx.getImageData(60, 0, 1, 1);
-hitctx.fillStyle = "blue";
-hitctx.fillRect(60, 0, 2, 2);
-// cbad.position.x = posData.data[0];
+// hitctx.fillStyle = "blue";
+// hitctx.fillRect(60, 0, 2, 2);
 xposindex = posData.data[0];
-// console.log(collidableMeshList[0].position.x)
 collidableMeshList[0].position.x = (xposindex-127)/2;
 }// canvas
 
