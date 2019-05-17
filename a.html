@@ -1,0 +1,649 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>3D spyhunter | z</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <style>
+
+    @font-face {
+    font-family: 'uni0553-webfont';
+    src: url('assets/uni0553-webfont.eot');
+    src: url('assets/uni0553-webfont.eot?#iefix') format('embedded-opentype'),
+    url('assets/uni0553-webfont.woff') format('woff'),
+    url('assets/uni0553-webfont.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    }
+  html, body {background: #222;}
+  .offroad {background: red !important;}
+  body {display: block; margin: 0 auto; padding: 0;  color: #fff; overflow: hidden; font-family: monospace; margin: 0;}
+  canvas {width: 100%; height: 100%; display: block; position: absolute;}
+  #cntrls {position: absolute; z-index: 2; padding: 0; margin: 8px;     font-family: 'uni0553-webfont';
+}
+
+</style>
+</head>
+<body>
+  <p id="cntrls">
+    controls: up,down,left,right <br>
+    accelerate:z <br>
+    brake:x <br>
+    shoot:c
+  </p>
+  <canvas id="hitcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; top:10px; right:10px; display: none; z-index: 4; background: #222;"></canvas>
+  <canvas id="colcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; bottom:10px; right:10px; z-index: 4; background: #333; display: none;"></canvas>
+
+  <script src="js/three.min.js"></script>
+  <script src="js/OrbitControls.min.js"></script>
+
+  <script>
+  var driving = false;
+  var exceeded = false;
+  var hitcanvas = document.getElementById('hitcanvas'),
+  hitctx = hitcanvas.getContext('2d');
+  var hitimg = new Image();
+  hitimg.src = 'assets/hitbg.png';
+  var xamnt;
+  var active = true
+  colcanvas = document.getElementById('colcanvas'),
+  colctx = colcanvas.getContext('2d');
+  var colimg = new Image();
+  colimg.src = 'assets/bg.png';
+
+  var hero;
+  var revcounter = 0;
+  var count = 0;
+  var increment = 0;
+  var topspeed = 10;
+  var slowdown = false;
+  var enginefail = false;
+  var seekeron = false;
+  var xposindex = 127;
+  var timerID;
+  var bullets = [];
+  var xu = 0;
+  var xv = 0;
+  var startpoz = 20;
+  var collidableMeshList = [];
+  var speed = 50;
+  var clock = new THREE.Clock();
+  var delta = 0;
+  var width = window.innerWidth,
+  height = window.innerHeight;
+  var camera, scene, renderer, geometry, texture, mesh, controls, keyboard;
+
+
+
+// 2D canvas update
+function changeCanvas() {
+
+// wall collide slow down
+if (enginefail==true && revcounter>1) {
+  revcounter=revcounter/1.1;
+  document.body.classList = 'offroad';
+}  else {
+  if (revcounter>0) {accelerate();
+    document.body.classList = '';
+      }
+}// if enginefail
+
+count += revcounter/4;
+
+if (count>(2304-128)) {count=0;}
+// refresh colour canvas
+colctx.drawImage(colimg, 0, 0);
+colctx.clearRect(0, 0, 128, 128);
+colctx.drawImage(
+  colimg,
+  count,
+  0,
+  128,
+  128,0, 0, 128, 128
+  );
+
+// refresh lookup canvas    
+hitctx.clearRect(0,0,128, 128); 
+hitctx.drawImage(hitimg, count, 0, 
+  128, 128, 
+  0, 0, 128, 128);
+
+// check lookup colour
+texData = hitctx.getImageData(xv, xu, 128, 128);
+if (texData.data[0]>1) {
+  enginefail = true;
+} else {
+  enginefail = false;
+}
+// red dot
+// hitctx.fillStyle = "red";
+// hitctx.fillRect(xv, xu, 2, 2);
+// check lookup for position in x
+// console.log(((-collidableMeshList[0].position.z+10*6.4)-44)*3.2)
+var xx =((-collidableMeshList[0].position.z+10*6.4)-44)*3.2;
+posData = hitctx.getImageData(xx, 0, 1, 1);
+hitctx.fillStyle = "blue";
+hitctx.fillRect(xx, 0, 2, 2);
+xposindex = posData.data[0];
+collidableMeshList[0].position.x = (xposindex-127)/2;
+}// canvas
+
+
+function init() {
+  renderer = new THREE.WebGLRenderer({
+    alpha: true,
+    antialias: true
+  });
+  renderer.setSize(width, height);
+  document.body.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 1000);
+  camera.position.z = 0.1;
+  camera.position.y = 30;
+  scene.add(camera);
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enablePan = false;
+// ambient light
+var ambient = new THREE.AmbientLight(0xffffff);
+ambient.intensity = 0.7;
+scene.add(ambient);
+
+// lights
+var light = new THREE.PointLight(0xffffff, 1, 100);
+light.position.set(50, 50, 10);
+scene.add(light);
+
+// hero bounding box
+hero = new THREE.Group();
+scene.add( hero );
+// 3D cursor
+cursor = new THREE.Group();
+scene.add(cursor);
+cursor.position.z=2;
+// bulletgroup
+bulletgroup = new THREE.Group();
+scene.add(bulletgroup);
+
+
+//  hero object
+let bgeometry = new THREE.BoxGeometry( 1, 1, 1.8 );
+let mmaterial = new THREE.MeshLambertMaterial( { color: 0xcccccc, wireframe:true,
+transparent:true, opacity:0 } );
+cubicbody = new THREE.Mesh( bgeometry, mmaterial );
+cubicbody.position.set(0,0,0);
+hero.add( cubicbody );
+
+
+//
+let shootgeometry = new THREE.BoxGeometry( 1, 1, 1 );
+let shootmaterial = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+canonball = new THREE.Mesh( shootgeometry, shootmaterial );
+canonball.position.set(0,0,1000);
+hero.add( canonball );
+
+
+// shadow 
+// let egeometry = new THREE.PlaneGeometry(1, 1.5, 1);
+// let ematerial = new THREE.MeshLambertMaterial({
+//   color: 0x333333
+// });
+// let shdw = new THREE.Mesh(egeometry, ematerial);
+// shdw.position.set(0, -0.3, 0);
+// shdw.rotation.set(-Math.PI / 2, 0, 0)
+// cursor.add(shdw);
+
+
+runtexture = new THREE.Texture(colcanvas);
+runtexture.magFilter = THREE.NearestFilter;
+runtexture.minFilter = THREE.LinearMipMapLinearFilter;
+
+
+// ground texture
+var material = new THREE.MeshBasicMaterial( {
+  color: 0xffffff 
+  ,map:runtexture
+  , side:THREE.DoubleSide
+} );
+
+
+var geometry = new THREE.PlaneBufferGeometry( 40, 40, 1 );
+var groundplane = new THREE.Mesh( geometry, material );
+groundplane.rotation.set (-Math.PI/2,0,Math.PI/2);
+groundplane.position.set (0,-0.5,0);
+scene.add( groundplane );
+
+
+// weapons
+emitter = new THREE.Object3D();
+emitter.position.set(0, 0.1, -0.6);
+hero.add(emitter);
+
+
+// keys
+keyboard = {
+  _pressed: {},
+
+  LEFT: 37,
+  UP: 38,
+  RIGHT: 39,
+  DOWN: 40,
+  Z: 90,
+  X: 88,
+  C: 67,
+
+  isDown: function(keyCode) {
+    return this._pressed[keyCode];
+  },
+
+  onKeydown: function(event) {
+    this._pressed[event.keyCode] = true;
+  },
+
+  onKeyup: function(event) {
+    delete this._pressed[event.keyCode];
+  }
+};
+
+// events
+window.addEventListener( 'resize', onWindowResize, false );
+window.addEventListener('keyup', function(event) { keyboard.onKeyup(event); }, false);
+window.addEventListener('keydown', function(event) { keyboard.onKeydown(event); }, false);
+
+}// init
+
+
+// resize
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize( window.innerWidth, window.innerHeight );
+}
+
+
+// player movement update
+function playerupdate() {
+  if (keyboard.isDown(keyboard.LEFT) && cursor.position.x>-20)   {
+    cursor.position.x -= 0.5; 
+  }
+  if (keyboard.isDown(keyboard.RIGHT)  && cursor.position.x<20)   {
+    cursor.position.x += 0.5; 
+  }
+  if (keyboard.isDown(keyboard.UP)  && cursor.position.z>-20)   {
+    cursor.position.z -= 0.5; 
+  }
+  if (keyboard.isDown(keyboard.DOWN)  && cursor.position.z<20)   {
+    cursor.position.z += 0.5; 
+    //
+    seekeron = true;
+  }
+  if (keyboard.isDown(keyboard.Z))   {
+    driving = true;
+    trk.visible = true;
+    accelerate();
+    document.getElementById('cntrls').style.display = 'none';
+  }
+  if (keyboard.isDown(keyboard.X))   {
+    decelerate();
+  }
+  if (keyboard.isDown(keyboard.C))   {
+    // if (exceeded) {return}
+    // clear/reset array
+    bullets=[];
+    canonball.position.z = 0;
+    emitter.position.z = 0;
+    exceeded = false;
+    shoot();
+  }
+
+// // position lerp
+hero.position.x += (cursor.position.x - hero.position.x)*0.6;
+hero.position.z += (cursor.position.z - hero.position.z)*0.6;
+// rotation lerp
+hero.rotation.y = -(cursor.position.x - hero.position.x)*0.9;
+hero.rotation.x = (cursor.position.z - hero.position.z)*0.9;
+// red dot
+xu = 64+Math.floor( hero.position.x*100/32);
+xv = 64-Math.floor(hero.position.z*100/32);
+runtexture.needsUpdate = true;
+
+}// move player
+
+// speedo
+//go
+function accelerate(e) {
+  slowdown = false;
+  stopwarp = false;
+  timerID = cancelAnimationFrame(slowtimer);
+  timerID = requestAnimationFrame(timer);
+  if (e) {e.preventDefault();}
+}
+
+// brake
+function decelerate(e) {
+  slowdown = true;
+  stopwarp = true; 
+  timerID = cancelAnimationFrame(timerID);
+  timerID = requestAnimationFrame(slowtimer);
+  if (e) {e.preventDefault();}
+}
+
+// slow down
+function slowtimer() {
+  revcounter = revcounter-0.1;
+  if (revcounter<0.1) {
+    revcounter=0; 
+    cancelAnimationFrame(slowtimer); 
+    return;
+  } else {
+    requestAnimationFrame(slowtimer);
+  }
+}
+
+
+// speed up
+function timer() { 
+  if (revcounter < topspeed || slowdown == true) {
+    timerID = requestAnimationFrame(timer);
+    revcounter = revcounter+0.1;
+  }
+}
+
+//shoot
+function shoot() {
+canonball.visible = true;
+canonball.position.copy(emitter.getWorldPosition());
+canonball.quaternion.copy(cursor.quaternion);
+bulletgroup.add(canonball);
+bullets.push(canonball);
+}
+
+
+// game pause when browser loses focus
+// Active
+window.addEventListener('focus', starttab);
+// Inactive
+window.addEventListener('blur', stoptab);
+// Start 
+function starttab() {
+  active = true;
+  animate();
+}
+// stop
+function stoptab() {
+  active = false;
+}
+
+
+
+// collide objects
+function initcolliders() {
+  var collidergeo = new THREE.CubeGeometry(0.5, 0.5, 1.7);
+
+  var yellowc = new THREE.MeshBasicMaterial({
+    color: 0xffff00, wireframe:true,
+    transparent:true, opacity:0
+  });
+  cgood = new THREE.Mesh(collidergeo, yellowc);
+  cgood.position.set(3, 0.5, startpoz);
+  cgood.name = 'good';
+  scene.add(cgood);
+  collidableMeshList.push(cgood);
+
+
+// bad collider
+var cbad = new THREE.Mesh(collidergeo, yellowc);
+cbad.position.set(-3, 0.5, startpoz);
+cbad.name = 'bad';
+scene.add(cbad);
+collidableMeshList.push(cbad);
+cbad.visible = false;
+
+
+// heat seeker collider
+var seeker = new THREE.Mesh(collidergeo, yellowc);
+seeker.position.set(0, 0.5, startpoz);
+seeker.name = 'seeker';
+scene.add(seeker);
+collidableMeshList.push(seeker);
+seeker.visible = false;
+
+}//cbad
+
+
+//
+
+
+// HIT function
+function hit(v) {
+  if (v.length > 0) {
+    trk.visible = false;
+    collidableMeshList[0].visible = false;
+
+    var num2 = Math.floor(Math.random() * 5) + 1;
+    num2 *= Math.floor(Math.random() * 2) == 1 ? 1 : -1;
+    setTimeout(function() {
+      trk.visible = true;  
+      collidableMeshList[0].visible = true;
+      v[0].object.position.x = num2;
+      v[0].object.position.z = startpoz;
+    }, 300);
+
+
+    if (v[0].object.name == 'good') {
+      goodhit();
+    }
+    if (v[0].object.name == 'bad') {
+      badhit();
+    }
+    if (v[0].object.name == 'seeker') {
+      seekhit();
+    }
+
+
+} //if
+} // fn hit
+
+// BULLET HIT
+function bullethit(v) {
+  if (v.length > 0) {
+bullets=[];
+canonball.position.z = -10000;
+// emitter.position.z = 0;
+
+    var num2 = Math.floor(Math.random() * 5) + 1;
+    num2 *= Math.floor(Math.random() * 2) == 1 ? 1 : -1;
+    v[0].object.position.x = num2;
+    v[0].object.position.z = startpoz;
+
+    if (v[0].object.name == 'good') {
+      goodshoot();
+    }
+    if (v[0].object.name == 'bad') {
+      badshoot();
+    }
+    if (v[0].object.name == 'seeker') {
+      seekshoot();
+      seekeron = false; // heat seeker enemy [ON]
+    }
+
+
+} //if
+} // fn bullethit
+
+function collisions() {
+// ship hitbox
+for (var vertexIndex = 0; vertexIndex < cubicbody.geometry.vertices.length; vertexIndex++) {
+  var localVertex = cubicbody.geometry.vertices[vertexIndex].clone();
+  var globalVertex = localVertex.applyMatrix4(cubicbody.matrix);
+  var directionVector = globalVertex.sub(cubicbody.position);
+
+  var vray = new THREE.Raycaster(hero.position, directionVector.normalize());
+  var collisionResults = vray.intersectObjects(collidableMeshList);
+  if (collisionResults.length > 0 && collidableMeshList.distance < directionVector.length())
+    console.log('hit');
+  hit(collisionResults)
+}
+// bullet hitbox
+for (var vertexIndex = 0; vertexIndex < canonball.geometry.vertices.length; vertexIndex++) {
+  var localVertex = canonball.geometry.vertices[vertexIndex].clone();
+  var globalVertex = localVertex.applyMatrix4(canonball.matrix);
+  var directionVector = globalVertex.sub(canonball.position);
+
+  var vray = new THREE.Raycaster(canonball.position, directionVector.normalize());
+  var collisionResults = vray.intersectObjects(collidableMeshList);
+  if (collisionResults.length > 0 && collidableMeshList.distance < directionVector.length())
+    console.log('hit');
+  bullethit(collisionResults)
+}
+    // **** heat seeker
+          // set bad
+// if (seekeron) {
+//           var distance = collidableMeshList[2].position.distanceTo( hero.position );
+//           if (distance<0.001) {return}
+//         collidableMeshList[2].position.x += (hero.position.x - collidableMeshList[2].position.x) * 0.01;
+//         collidableMeshList[2].position.z += (hero.position.z - collidableMeshList[2].position.z) * 0.01;
+// }
+
+
+
+    // set truck speed/pos
+    if (revcounter>0) {
+    collidableMeshList[0].position.z -= (delta*3);
+    xposindex = xposindex+(delta*3);
+      if (enginefail) {
+        xposindex = xposindex-(delta*12);
+        collidableMeshList[0].position.z -= (delta*12);
+      }
+    }
+
+
+    if (collidableMeshList[0].position.z > 20 || collidableMeshList[0].position.z < -20) {
+      collidableMeshList[0].position.z = 20;
+trk.visible = false;
+collidableMeshList[0].visible = false;
+setTimeout(function() {
+trk.visible = true;  
+collidableMeshList[0].visible = true;
+}, 100);
+
+    }
+    
+
+// truck position lerp
+trk.position.x += (cgood.position.x - trk.position.x)*0.4;
+trk.position.z += (cgood.position.z - trk.position.z)*0.4;
+// rotation lerp
+trk.rotation.y = 1.55-(cgood.position.x - trk.position.x)*0.4;
+trk.rotation.x = (cgood.position.z - trk.position.z)*0.4;
+
+    // set bad
+    // collidableMeshList[1].position.z += (revcounter/1000);
+    // if (collidableMeshList[1].position.z > 20) {
+    //     collidableMeshList[1].position.z = -20;
+    // }
+}//collisions
+
+
+// hit functions
+function goodhit() {console.log('good'); explosion();}
+function badhit() {console.log('bad'); explosion();}
+function seekhit() {console.log('seek'); explosion();}
+
+function goodshoot() {
+console.log('good');
+explosion();
+}
+
+function badshoot() {
+console.log('bad');
+explosion();
+}
+
+function seekshoot() {
+console.log('seek');
+explosion();
+}
+
+
+
+// AUDIO
+// boost sound
+function explosion() {
+  new Audio("audio/explode2.wav").play();
+}
+
+function tap() {
+  new Audio("audio/tap2.wav").play();
+}
+
+
+// 3D models
+function addship() {
+  // car
+var loader = new THREE.ObjectLoader();
+loader.load( 'models/car.json', function ( object ) {
+    object.scale.set( 0.3, 0.3, 0.3 );
+    object.rotation.set( 0, Math.PI, 0 );
+    object.position.set( 0.4, 0, -0.2 );
+    object.name = "car";
+    hero.add( object );
+} );
+  // truck
+var loader = new THREE.ObjectLoader();
+loader.load( 'models/truck.json', function ( object ) {
+    object.scale.set( 0.3, 0.3, 0.3 );
+    object.position.set( 0.15, -0.4, 0 );
+    object.name = "truck";
+    scene.add( object );
+        // // baddie position lerp
+trk = scene.getObjectByProperty( 'name', 'truck', false );
+trk.visible = false;
+
+} );
+}
+
+// render loop
+function animate() {
+  if (!active) {return}
+  increment++;
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+  controls.update();
+  playerupdate();
+  collisions();
+  changeCanvas();
+  delta = clock.getDelta();
+
+  bullets.forEach(b => {
+// move along z-axis
+if (!exceeded) {canonball.translateZ(-speed * delta);}
+// delete once out of frame
+if (canonball.position.z < -20) {
+  exceeded = true;
+  scene.remove( canonball );
+  canonball.visible = false;
+}
+});
+}
+
+// START HERE >>>>>
+window.addEventListener('load', initialise, false);
+
+function initialise(){
+  init();
+  addship();
+  initcolliders();
+    setTimeout(function() {
+      animate();
+    }, 100);
+}
+
+
+
+
+</script>
+</body>
+</html>
