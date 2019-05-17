@@ -289,7 +289,8 @@ function playerupdate() {
     decelerate();
   }
   if (keyboard.isDown(keyboard.C))   {
-    // if (exceeded) {return}
+    // if (!exceeded) {tap();}
+
     // clear/reset array
     bullets=[];
     canonball.position.z = 0;
@@ -318,7 +319,14 @@ function accelerate(e) {
   stopwarp = false;
   timerID = cancelAnimationFrame(slowtimer);
   timerID = requestAnimationFrame(timer);
-  if (e) {e.preventDefault();}
+    if (revcounter < 0.1) {
+        audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+        source = audioCtx.createBufferSource();
+        getData();
+        source.start(0);
+
+    }
+    if (e) {e.preventDefault();}
 }
 
 // brake
@@ -336,6 +344,9 @@ function slowtimer() {
   if (revcounter<0.1) {
     revcounter=0; 
     cancelAnimationFrame(slowtimer); 
+    if (typeof source !== 'undefined') {
+        source.stop(0);
+    }
     return;
   } else {
     requestAnimationFrame(slowtimer);
@@ -615,8 +626,11 @@ function animate() {
   playerupdate();
   collisions();
   changeCanvas();
+      // play engine sound
+      if (typeof source !== 'undefined') {
+        source.playbackRate.value = revcounter / 20;
+      }
   delta = clock.getDelta();
-
   bullets.forEach(b => {
 // move along z-axis
 if (!exceeded) {canonball.translateZ(-speed * delta);}
@@ -636,11 +650,46 @@ function initialise(){
   init();
   addship();
   initcolliders();
-    setTimeout(function() {
-      animate();
-    }, 100);
+  setTimeout(function() {
+    animate();
+  }, 200);
 }
 
+
+
+//audio
+function getData() {
+    source = audioCtx.createBufferSource();
+    request = new XMLHttpRequest();
+
+    request.open('GET', 'audio/ngin.wav', true);
+
+    request.responseType = 'arraybuffer';
+    request.onload = function() {
+        var audioData = request.response;
+
+        audioCtx.decodeAudioData(audioData, function(buffer) {
+                myBuffer = buffer;
+                songLength = buffer.duration;
+                source.buffer = myBuffer;
+                source.playbackRate.value = revcounter / 20;
+                source.loop = true;
+
+                var gainNode = audioCtx.createGain()
+                gainNode.gain.value = 0.2 // 10% volume
+                gainNode.connect(audioCtx.destination)
+                source.connect(gainNode)
+
+            },
+
+            function(e) {
+                "Error with decoding audio data" + e.error
+            });
+
+    }
+
+    request.send();
+}
 
 
 
