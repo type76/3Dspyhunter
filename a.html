@@ -3,7 +3,7 @@
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>3D spyhunter | z</title>
+  <title>3D spyhunter | A</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <style>
 
@@ -22,6 +22,8 @@
   canvas {width: 100%; height: 100%; display: block; position: absolute;}
   #cntrls {position: absolute; z-index: 2; padding: 0; margin: 8px;     font-family: 'uni0553-webfont';
 }
+#hud {position: absolute; z-index: 33;
+bottom: 0; width: 100%;}
 
 </style>
 </head>
@@ -32,11 +34,15 @@
     brake:x <br>
     shoot:c
   </p>
+
+  <div id="hud"><div class="joy" id="joy"></div></div>
+  
   <canvas id="hitcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; top:10px; right:10px; display: none; z-index: 4; background: #222;"></canvas>
   <canvas id="colcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; bottom:10px; right:10px; z-index: 4; background: #333; display: none;"></canvas>
 
   <script src="js/three.min.js"></script>
   <script src="js/OrbitControls.min.js"></script>
+  <script src="js/nipple.min.js"></script>
 
   <script>
   var driving = false;
@@ -51,6 +57,7 @@
   colctx = colcanvas.getContext('2d');
   var colimg = new Image();
   colimg.src = 'assets/bg.png';
+  var roadmax = {x:40, y:40};
 
   var hero;
   var revcounter = 0;
@@ -167,6 +174,10 @@ cursor.position.z=2;
 bulletgroup = new THREE.Group();
 scene.add(bulletgroup);
 
+// bggroup
+bggroup = new THREE.Group();
+scene.add(bggroup);
+
 
 //  hero object
 let bgeometry = new THREE.BoxGeometry( 1, 1, 1.8 );
@@ -221,6 +232,27 @@ emitter = new THREE.Object3D();
 emitter.position.set(0, 0.1, -0.6);
 hero.add(emitter);
 
+// trees
+
+// for ( var i = 0; i < 10; i ++ ) {
+//           var x = Math.random() * 20 - 20;
+//           var y = 0.5;
+//           var z = Math.random() * 20 - 20;
+//           vertices.push( x, y, z );
+// }
+
+// geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+var spriteMap = new THREE.TextureLoader().load( "assets/bush.png" );
+spriteMap.magFilter = THREE.NearestFilter;
+spriteMap.minFilter = THREE.LinearMipMapLinearFilter;
+var spriteMaterial = new THREE.SpriteMaterial( { map: spriteMap, color: 0xffffff } );
+var sprite = new THREE.Sprite( spriteMaterial );
+sprite.position.x = -20;
+sprite.position.z = -20;
+sprite.position.y = 0.25;
+sprite.scale.set(2,2,2);
+bggroup.add( sprite );
+
 
 // keys
 keyboard = {
@@ -266,16 +298,16 @@ function onWindowResize() {
 // player movement update
 function playerupdate() {
   if (keyboard.isDown(keyboard.LEFT) && cursor.position.x>-20)   {
-    cursor.position.x -= 0.5; 
+    cursor.position.x -= 0.4; 
   }
   if (keyboard.isDown(keyboard.RIGHT)  && cursor.position.x<20)   {
-    cursor.position.x += 0.5; 
+    cursor.position.x += 0.4; 
   }
   if (keyboard.isDown(keyboard.UP)  && cursor.position.z>-20)   {
-    cursor.position.z -= 0.5; 
+    cursor.position.z -= 0.2; 
   }
   if (keyboard.isDown(keyboard.DOWN)  && cursor.position.z<20)   {
-    cursor.position.z += 0.5; 
+    cursor.position.z += 0.2; 
     //
     seekeron = true;
   }
@@ -613,6 +645,17 @@ trk.visible = false;
 } );
 }
 
+
+//move background
+function movebg() {
+// bggroup.position.z = count/4;
+bggroup.position.z += revcounter/13;
+if (bggroup.position.z > 40) {
+  bggroup.position.z = 0;
+}
+}
+
+
 // render loop
 function animate() {
   if (!active) {return}
@@ -623,6 +666,7 @@ function animate() {
   playerupdate();
   collisions();
   changeCanvas();
+  movebg()
       // play engine sound
       if (typeof source !== 'undefined') {
         source.playbackRate.value = revcounter / 20;
@@ -651,8 +695,6 @@ function initialise(){
     animate();
   }, 200);
 }
-
-
 
 //audio
 function getData() {
@@ -689,6 +731,57 @@ function getData() {
 }
 
 
+// joystick
+var options = {
+  zone: document.getElementById('joy'),
+  mode: 'static',
+  restOpacity: 0.6,
+  lockX: false,
+  position: {
+    left: '50%',
+    bottom: '100px'
+  }
+};
+
+var joy = nipplejs.create(options);
+
+
+joy.on('move dir start', function (evt, data) {
+if (revcounter<2) {accelerate();}
+
+// ring.material.opacity = 1;
+if (data.force>0) {force = data.force; }
+  if (data.direction){ 
+    // console.log(ship.position.x)
+if (data.direction.x=='right') {
+        cursor.position.x=cursor.position.x+data.force/5;
+}// R
+
+if (data.direction.x=='left') {
+        cursor.position.x=cursor.position.x-data.force/5;    
+}// L
+
+if (data.direction.y=='up') {
+  if (cursor.position.z> -roadmax.y) {
+        cursor.position.z=cursor.position.z-data.force/10;       
+  } // pos.z
+    
+}// U
+
+if (data.direction.y=='down') {
+  if (cursor.position.z< roadmax.y) {
+        cursor.position.z=cursor.position.z+data.force/10;   
+    }// pos.z
+}// U
+
+}// if direction
+});// on start
+
+
+// end
+joy.on('end', function (evt, data) {
+decelerate();
+});// on end
 
 </script>
 </body>
