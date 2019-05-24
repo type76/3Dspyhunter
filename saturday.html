@@ -20,7 +20,7 @@
   .offroad {background: red !important;}
   body {display: block; margin: 0 auto; padding: 0;  color: #fff; overflow: hidden; font-family: monospace; margin: 0;}
   canvas {width: 100%; height: 100%; display: block; position: absolute;}
-  #cntrls {position: absolute; z-index: 2; padding: 0; margin: 8px;     font-family: 'uni0553-webfont';
+  #cntrls {position: absolute; z-index: 2; padding: 0; margin: 8px;     font-family: 'uni0553-webfont'; text-transform: uppercase;
 }
 
 </style>
@@ -32,7 +32,8 @@
     brake:x <br>
     shoot:c
   </p>
-  <canvas id="hitcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; top:10px; right:10px; display: none; z-index: 4; background: #222;"></canvas>
+
+  <canvas id="hitcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; top:10px; right:10px; display: block; z-index: 4; background: #222;"></canvas>
   <canvas id="colcanvas" width="128" height="128" style="width:128px; height: 128px; position: absolute; bottom:10px; right:10px; z-index: 4; background: #333; display: none;"></canvas>
 
   <script src="js/three.min.js"></script>
@@ -42,6 +43,7 @@
   var driving = false;
   var exceeded = false;
   var truckcollide = false;
+  var edgeupdate = false;
   var hitcanvas = document.getElementById('hitcanvas'),
   hitctx = hitcanvas.getContext('2d');
   var hitimg = new Image();
@@ -61,6 +63,7 @@
   var slowdown = false;
   var enginefail = false;
   // var seekeron = false;
+var pathf = 0;
   var xposindex = 127;
   var timerID;
   var bullets = [];
@@ -124,7 +127,7 @@ if (texData.data[0]>1) {
 if (truckcollide){return} 
 var xx =((-collidableMeshList[0].position.z+10*6.4)-44)*3.2;
 posData = hitctx.getImageData(xx, 0, 1, 1);
-// blue enemy dot
+// // blue enemy dot
 // hitctx.fillStyle = "blue";
 // hitctx.fillRect(xx, 0, 2, 2);
 xposindex = posData.data[0];
@@ -135,7 +138,23 @@ collidableMeshList[0].position.x = (xposindex-127)/2;
       xposindex = posData.data[0];     
       collidableMeshList[0].position.x = (xposindex-127)/2;
     } 
+//
+// blue road side dot
+// pathf++; if (pathf>128) {pathf=0}
+// var xData = hitctx.getImageData(127, pathf, 1, 1);
+// console.log(xData.data[0], pathf);
+// if (xData.data[0]>0) {console.log('xData.data[0]'); }
+// hitctx.fillStyle = "blue";
+// hitctx.fillRect(127, pathf, 4, 4);
 
+
+// var roadedge = hitctx.getImageData(127, 0, 1, 1);
+// var rdpos = roadedge.data[0]; 
+// edge.position.x = (rdpos-64);  
+// edge.position.z = -20; 
+
+
+// console.log(xData.data[0])
 }// canvas
 
 
@@ -150,11 +169,19 @@ function init() {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 1000);
+  // camera.position.z = 28; camera.position.y = 10; // fps
   camera.position.z = 0.01;
   camera.position.y = 30;
   scene.add(camera);
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enablePan = false;
+
+//controls
+controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.maxPolarAngle = Math.PI * 0.46;
+controls.enableDamping = true;
+controls.dampingFactor = 0.4;
+controls.maxDistance = 30;
+controls.enablePan = false;
+
 // ambient light
 var ambient = new THREE.AmbientLight(0xffffff);
 ambient.intensity = 0.7;
@@ -190,12 +217,12 @@ cubicbody.position.set(0,0,0);
 hero.add( cubicbody );
 
 
-//
-let shootgeometry = new THREE.BoxGeometry( 1, 1, 1 );
+// bullet object
+let shootgeometry = new THREE.BoxGeometry( 0.5, 0.5, 0.5 );
 let shootmaterial = new THREE.MeshBasicMaterial( { color: 0xffffff } );
-canonball = new THREE.Mesh( shootgeometry, shootmaterial );
-canonball.position.set(0,0,1000);
-hero.add( canonball );
+bullet = new THREE.Mesh( shootgeometry, shootmaterial );
+bullet.position.set(0,0,1000);
+hero.add( bullet );
 
 
 // shadow 
@@ -276,6 +303,13 @@ bggroup.add( bush );
 }// Rbushes
 
 
+// lamp posts [edge]
+var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+edge = new THREE.Mesh( geometry, material );
+edge.position.z = -20;
+edge.name = 'edge';
+bggroup.add( edge );
 
 
 // keys
@@ -348,7 +382,7 @@ function playerupdate() {
 
     // clear/reset array
     bullets=[];
-    canonball.position.z = 0;
+    bullet.position.z = 0;
     emitter.position.z = 0;
     exceeded = false;
     shoot();
@@ -360,7 +394,8 @@ var diffz = cursor.position.z - hero.position.z;
 // var posdiff = Math.abs(diffx);
 // var expo = (posdiff)/20;
 // console.log(expo)
-var expo = revcounter/100;
+var expo = 0.07+(revcounter/100);
+// var expo = revcounter/100;
 // // position lerp
 hero.position.x += diffx*expo;
 hero.position.z += diffz*expo;
@@ -372,6 +407,7 @@ xu = 64+Math.floor( hero.position.x*100/32);
 xv = 64-Math.floor(hero.position.z*100/32);
 runtexture.needsUpdate = true;
 
+// camera.lookAt(hero.position.x, 0, hero.position.z-10); //fps
 }// move player
 
 // speedo
@@ -432,11 +468,11 @@ function timer() {
 
 //shoot
 function shoot() {
-canonball.visible = true;
-canonball.position.copy(emitter.getWorldPosition());
-canonball.quaternion.copy(cursor.quaternion);
-bulletgroup.add(canonball);
-bullets.push(canonball);
+bullet.visible = true;
+bullet.position.copy(emitter.getWorldPosition());
+bullet.quaternion.copy(cursor.quaternion);
+bulletgroup.add(bullet);
+bullets.push(bullet);
 }
 
 
@@ -524,7 +560,7 @@ if (v.length > 0) {
 function bullethit(v) {
   if (v.length > 0) {
 bullets=[];
-canonball.position.z = -10000;
+bullet.position.z = -10000;
 // emitter.position.z = 0;
 
     // var num2 = Math.floor(Math.random() * 5) + 1;
@@ -564,12 +600,12 @@ for (var vertexIndex = 0; vertexIndex < cubicbody.geometry.vertices.length; vert
   hit(collisionResults)
 }
 // bullet hitbox
-for (var vertexIndex = 0; vertexIndex < canonball.geometry.vertices.length; vertexIndex++) {
-  var localVertex = canonball.geometry.vertices[vertexIndex].clone();
-  var globalVertex = localVertex.applyMatrix4(canonball.matrix);
-  var directionVector = globalVertex.sub(canonball.position);
+for (var vertexIndex = 0; vertexIndex < bullet.geometry.vertices.length; vertexIndex++) {
+  var localVertex = bullet.geometry.vertices[vertexIndex].clone();
+  var globalVertex = localVertex.applyMatrix4(bullet.matrix);
+  var directionVector = globalVertex.sub(bullet.position);
 
-  var vray = new THREE.Raycaster(canonball.position, directionVector.normalize());
+  var vray = new THREE.Raycaster(bullet.position, directionVector.normalize());
   var collisionResults = vray.intersectObjects(collidableMeshList);
   if (collisionResults.length > 0 && collidableMeshList.distance < directionVector.length())
     console.log('hit');
@@ -684,58 +720,37 @@ trk.visible = false;
 
 
 //move background
-function movebg() {
+function movebg() {   
 for ( var i = 0; bggroup.children[i]; i ++ ) {
 bggroup.children[i].position.z += revcounter/13;
 if (bggroup.children[i].position.z > 20) {
   bggroup.children[i].position.z = -21-Math.random()*20;
 }
-if (bggroup.children[i].position.z< -20) {bggroup.children[i].visible=false;} else {bggroup.children[i].visible= true;}
+if (bggroup.children[i].position.z< -20) {
+  bggroup.children[i].visible=false;} else {
+    bggroup.children[i].visible= true;}
 }
 
-}
+// if (edge.position.z> 20) {
+//   // edgeupdate = true; 
+//   // if (true) {}
+
+//   moveedge();
+// }
 
 
-// render loop
-function animate() {
-  if (!active) { return } // [stop raf]
-  increment++;
-  requestAnimationFrame(animate);
-  renderer.render(scene, camera);
-  controls.update();
-  playerupdate();
-  collisions();
-  changeCanvas();
-  movebg()
-// play engine sound
-  if (typeof source !== 'undefined') {
-    source.playbackRate.value = revcounter / 20;
-  }
-  delta = clock.getDelta();
-  bullets.forEach(b => {
-// move along z-axis
-  if (!exceeded) {canonball.translateZ(-speed * delta);}
-// delete once out of frame
-  if (canonball.position.z < -20) {
-  exceeded = true;
-  scene.remove( canonball );
-  canonball.visible = false;
-}
-});
-}
+}//movebg
 
-// START HERE >>>>>
-window.addEventListener('load', initialise, false);
 
-function initialise(){
-  init();
-  addship();
-  initcolliders();
-  setTimeout(function() {
-    animate();
-  }, 200);
-}
-
+// //move edge object
+// function moveedge() {
+//   // if (!edgeupdate) {return}
+// // 3D road side element positions
+// var roadedge = hitctx.getImageData(127, 0, 1, 1);
+// var rdpos = roadedge.data[0]; 
+// edge.position.x = (rdpos-64);  
+// edge.position.z = -20;  
+// }
 
 
 //audio
@@ -773,7 +788,47 @@ function getData() {
 }
 
 
+// render loop
+function animate() {
+  if (!active) { return } // [stop raf]
+  increment++;
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+  controls.update();
+  // camera.lookAt(hero.position.x, hero.position.y, hero.position.z );
+  playerupdate();
+  collisions();
+  changeCanvas();
+  movebg()
+// play engine sound
+  if (typeof source !== 'undefined') {
+    source.playbackRate.value = revcounter / 20;
+  }
+  delta = clock.getDelta();
+  bullets.forEach(b => {
+// move bullets
+  if (!exceeded) {bullet.translateZ(-speed * delta);}
+// delete once out of frame
+  if (bullet.position.z < -20) {
+  exceeded = true;
+  scene.remove( bullet );
+  bullet.visible = false;
+}
+});
+}
 
+
+function initialise(){
+  init();
+  addship();
+  initcolliders();
+  setTimeout(function() {
+    animate();
+  }, 200);
+}
+
+// START HERE >>>>>
+window.addEventListener('load', initialise, false);
 </script>
 </body>
 </html>
