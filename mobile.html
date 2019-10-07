@@ -11,22 +11,73 @@
   body {display: block; margin: 0 auto; padding: 0;  color: #fff; overflow: hidden; font-family: monospace; margin: 0;}
   canvas {width: 100%; height: 100%; display: block; position: absolute;}
 #hud {position: absolute; z-index: 33;
-bottom: 0; top: 0; left: 0; right: 0;}
+bottom: 0; top: 0; left: 0; right: 0;
+transition: all 0.2s ease-in-out;}
+#hud.on {transform: translateX(100px);}
 #shootbtn, #gobtn {display: block; width: 50px; height: 50px; background: rgb(255,255,255,0.2); border-radius: 100%; border:none; outline: none; cursor: pointer; margin: 50px; position: absolute; right: 0; bottom: 0; z-index: 999;}
-#gobtn {bottom: auto; top: 0;}
+#shootbtn:hover, #gobtn:hover {background: red;}
+#gobtn {bottom: auto; top: 20px;}
 #gobtn.on {background: red;}
 .nipple {visibility: hidden; opacity: 0;}
+
+#cntrls {padding-left: 6px;}
+
+.mobileui {position: absolute; top: 0; left:0; 
+width: 100%; display: block; line-height: 4em; background: transparent; border: none; outline: none; z-index: 9999; cursor: pointer; color: #fff; text-align: left;}
+.mobileui:hover {color: red;}
+
+#space, #dirup, #dirdwn, #dirleft, #dirright,
+#zkey, #xkey, #ckey {background: transparent; outline: none; font-family: monospace; color: #fff; border:none; cursor: pointer; font-size: 1em; width: 108px; height: 24px; text-align: center; line-height: 20px; color: #fff; position: absolute; z-index: 1;
+  top:60px; left:32px;}
+
+#zkey {top:32px; left: 4px; width: 24px; }
+#xkey {top:32px; left: 32px; width: 24px; }
+#ckey {top:32px; left: 60px; width: 24px; }
+#dirup { top:32px; left: 204px; width: 24px; 
+transform: rotate(-90deg); transform-origin: center; }
+#dirdwn { left: 204px; width: 24px;
+transform: rotate(90deg); transform-origin: center;  }
+#dirleft { left: 176px; width: 24px; transform-origin: center;  }
+#dirright { left: 230px; width: 24px; transform-origin: center;  }
+svg path {opacity: 0.2;}
+#keys {position: relative; bottom: 0; }
+#uikeyboard {position: absolute; bottom: 0; left: 4px; z-index: 9999; transform: translateX(0);
+transition: all 0.2s ease-in-out;}
+#uikeyboard.hide {transform: translateX(-300px);}
 
 </style>
 </head>
 <body>
+ <button class="mobileui" href="#" onclick="setmobile()">ui</button>
 
-   <div class="joy" id="joy"></div>
+<div id="uikeyboard" class="hide">
+
+  <p id="cntrls">
+    controls: up,down,left,right <br>
+    accelerate:z <br>
+    brake:x <br>
+    shoot:c 
+  </p>
+
+<div id="keys">
+<button id="zkey" >z</button>
+<button id="xkey" >x</button>
+<button id="ckey" >c</button>
+<button id="dirup" >&gt;</button>
+<button id="dirdwn" >&gt;</button>
+<button id="dirleft" >&lt;</button>
+<button id="dirright" >&gt;</button>
+</div>
+<svg id="svgkeys" height="90" preserveAspectRatio="none" viewBox="0 0 260 90" width="260" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><g id="a"><path d="m24 24v-24h-24v24z" fill="#000"/></g></defs><use transform="translate(4 60)" xlink:href="#a"/><use transform="translate(4 32)" xlink:href="#a"/><use transform="translate(4 4)" xlink:href="#a"/><use transform="translate(32 32)" xlink:href="#a"/><use transform="translate(32 4)" xlink:href="#a"/><use transform="translate(60 32)" xlink:href="#a"/><use transform="translate(60 4)" xlink:href="#a"/><use transform="translate(88 32)" xlink:href="#a"/><use transform="translate(88 4)" xlink:href="#a"/><use transform="translate(116 4)" xlink:href="#a"/><use transform="translate(144 60)" xlink:href="#a"/><use transform="translate(176 60)" xlink:href="#a"/><use transform="translate(232 60)" xlink:href="#a"/><g fill="#000"><path d="m26-26h-24v28h-28v24h52z" transform="translate(142 30)"/><path d="m54 12v-24h-108v24z" transform="translate(86 72)"/><path d="m12 12v-24h-24v24z" transform="translate(216 44)"/><path d="m12-12h-24v24h24z" transform="translate(216 72)"/></g></svg>
+</div><!-- keyboard -->
+
  
-<div id="hud">
+<div id="hud" class="on">
+  <div class="joy" id="joy"></div>
+
   <button id="shootbtn" onclick="xshootbtn()" onmouseup="reload()">shoot</button>
 
-  <button id="gobtn" onclick="togglespeed()" >+</button>
+  <button id="gobtn" onclick="togglespeed()" >go</button>
 
 </div><!-- hud   -->
 
@@ -39,6 +90,8 @@ bottom: 0; top: 0; left: 0; right: 0;}
   <script src="js/nipple.min.js"></script>
 
   <script>
+var hud = document.getElementById('hud');
+var uikeyboard = document.getElementById('uikeyboard');
 
   var gobtn = document.getElementById('gobtn');
   var shootbtn = document.getElementById('shootbtn');
@@ -752,7 +805,7 @@ function getData() {
 
 // joystick
 var options = {
-  zone: document.body,
+  zone: document.getElementById('hud'),
   lockX: false,
 };
 
@@ -763,21 +816,21 @@ joy.on('move dir start', function (evt, data) {
 if (data.force>0) {force = data.force; }
   if (data.direction){ 
 if (data.direction.x=='right' && cursor.position.x<20) {
-        cursor.position.x=cursor.position.x+data.force/20;
+        cursor.position.x=cursor.position.x+data.force/10;
 }// R
 
 if (data.direction.x=='left' && cursor.position.x>-20) {
-        cursor.position.x=cursor.position.x-data.force/20;    
+        cursor.position.x=cursor.position.x-data.force/10;    
 }// L
 
-if (data.direction.y=='up' && cursor.position.z>-20) {
+if (data.direction.y=='up' && cursor.position.z>-10) {
   if (cursor.position.z> -roadmax.y) {
         cursor.position.z=cursor.position.z-data.force/50;       
   } // pos.z
     
 }// U
 
-if (data.direction.y=='down' && cursor.position.z<20) {
+if (data.direction.y=='down' && cursor.position.z<10) {
   if (cursor.position.z< roadmax.y) {
         cursor.position.z=cursor.position.z+data.force/50;   
     }// pos.z
@@ -795,7 +848,6 @@ if (data.direction.y=='down' && cursor.position.z<20) {
 
 // go button
 function togglespeed() {
-var gobtn = document.getElementById('gobtn');
   gobtn.classList.toggle('on');
   if (gobtn.classList != "on") {
     gobtn.innerHTML = '+';
@@ -811,6 +863,18 @@ var gobtn = document.getElementById('gobtn');
     gobtn.innerHTML = '-';          
     driving = true;
     }
+
+}
+
+
+// set mobile ui
+function setmobile() {
+  hud.classList.toggle('on');
+  if (hud.classList != "on") {
+  uikeyboard.classList = '';
+  } else {
+uikeyboard.classList='hide';
+  }
 
 }
 </script>
